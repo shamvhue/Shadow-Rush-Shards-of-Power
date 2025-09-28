@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shadow Rush: Action RPG</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: #e6e6e6;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+        
+        #game-container {
+            position: relative;
+            width: 800px;
+            max-width: 95vw;
+            height: 600px;
+            max-height: 90vh;
+            background: rgba(10, 15, 30, 0.8);
+            border-radius: 12px;
+            box-shadow: 0 0 30px rgba(0, 100, 255, 0.3);
+            overflow: hidden;
+            border: 2px solid #4a5568;
+        }
+        
+        canvas {
+            display: block;
+            background: #0f172a;
+        }
+        
+        #ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        
+        #health-bar {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 200px;
+            height: 25px;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 2px solid #4a5568;
+        }
+        
+        #health-fill {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(to right, #ef4444, #f87171);
+            transition: width 0.3s;
+        }
+        
+        #shard-display {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            pointer-events: auto;
+        }
+        
+        .shard-slot {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid #4a5568;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+        
+        .shard-slot:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 15px rgba(100, 150, 255, 0.7);
+        }
+        
+        .shard-slot.active {
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+            border-color: #fbbf24;
+        }
+        
+        .shard-icon {
+            font-size: 28px;
+            filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.7));
+        }
+        
+        #score-display {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 24px;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(0, 200, 255, 0.7);
+        }
+        
+        #music-btn {
+            position: absolute;
+            top: 20px;
+            right: 120px;
+            width: 40px;
+            height: 40px;
+            background: rgba(74, 85, 104, 0.7);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            pointer-events: auto;
+            font-size: 18px;
+            color: white;
+            transition: all 0.2s;
+        }
+        
+        #music-btn:hover {
+            background: rgba(74, 85, 104, 0.9);
+            transform: scale(1.1);
+        }
+        
+        #game-title {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            pointer-events: auto;
+        }
+        
+        #game-title h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+            color: #60a5fa;
+            text-shadow: 0 0 15px rgba(96, 165, 250, 0.7);
+            letter-spacing: 2px;
+        }
+        
+        #game-title p {
+            font-size: 18px;
+            margin-bottom: 30px;
+            max-width: 600px;
+            line-height: 1.6;
+        }
+        
+        #start-btn {
+            background: linear-gradient(to bottom, #4f46e5, #4338ca);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 22px;
+            border-radius: 50px;
+            cursor: pointer;
+            pointer-events: auto;
+            transition: all 0.3s;
+            box-shadow: 0 5px 15px rgba(79, 70, 229, 0.4);
+        }
+        
+        #start-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(79, 70, 229, 0.6);
+        }
+        
+        #game-over {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            pointer-events: auto;
+        }
+        
+        #game-over h2 {
+            font-size: 48px;
+            color: #f87171;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px rgba(248, 113, 113, 0.7);
+        }
+        
+        #final-score {
+            font-size: 28px;
+            margin-bottom: 30px;
+        }
+        
+        #restart-btn {
+            background: linear-gradient(to bottom, #10b981, #059669);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 22px;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 5px 15px rgba(16, 185, 129, 0.4);
+        }
+        
+        #restart-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(16, 185, 129, 0.6);
+        }
+        
+        .shard-tooltip {
+            position: absolute;
+            background: rgba(20, 25, 40, 0.9);
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            white-space: nowrap;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            border: 1px solid #4a5568;
+            z-index: 100;
+        }
+        
+        @media (max-width: 768px) {
+            #shard-display {
+                bottom: 15px;
+                gap: 10px;
+            }
+            
+            .shard-slot {
+                width: 50px;
+                height: 50px;
+            }
+            
+            .shard-icon {
+                font-size: 22px;
+            }
+            
+            #music-btn {
+                right: 80px;
+                width: 35px;
+                height: 35px;
+                font-size: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+        
+        <div id="ui-overlay">
+            <div id="health-bar">
+                <div id="health-fill"></div>
+            </div>
+            
+            <div id="score-display">Shards: 0</div>
+            <div id="music-btn">♪</div>
+            
+            <div id="shard-display">
+                <div class="shard-slot" data-shard="fire">
+                    <span class="shard-icon">🔥</span>
+                </div>
+                <div class="shard-slot" data-shard="ice">
+                    <span class="shard-icon">❄️</span>
+                </div>
+                <div class="shard-slot active" data-shard="lightning">
+                    <span class="shard-icon">⚡</span>
+                </div>
+                <div class="shard-slot" data-shard="shadow">
+                    <span class="shard-icon">🌑</span>
+                </div>
+            </div>
+            
+            <div id="game-title">
+                <h1>SHADOW RUSH</h1>
+                <p>An Action-RPG where you collect and swap between powerful elemental Shards to defeat enemies and survive as long as possible.</p>
+                <button id="start-btn">START ADVENTURE</button>
+            </div>
+            
+            <div id="game-over">
+                <h2>ADVENTURE ENDED</h2>
+                <div id="final-score">Shards Collected: 0</div>
+                <button id="restart-btn">TRY AGAIN</button>
+            </div>
+        </div>
+        
+        <div class="shard-tooltip" id="tooltip"></div>
+        
+        <!-- Background Music -->
+        <audio id="bgMusic" preload="auto">
+            <source src="https://lamultiani.site/wp-content/uploads/2025/09/cj.mp3" type="audio/mpeg">
+        </audio>
+    </div>
+
+    <script>
+        // Get canvas and context
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const bgMusic = document.getElementById('bgMusic');
+        const musicBtn = document.getElementById('music-btn');
+        
+        // Set canvas size
+        function resizeCanvas() {
+            const container = document.getElementById('game-container');
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+        }
+        
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        
+        // Game state
+        let gameState = 'menu'; // 'menu', 'playing', 'gameOver'
+        let player = {
+            x: 0,
+            y: 0,
+            radius: 25,
+            health: 100,
+            maxHealth: 100,
+            speed: 5,
+            activeShard: 'lightning'
+        };
+        
+        let enemies = [];
+        let shards = [];
+        let score = 0;
+        let keys = {};
+        let lastShot = 0;
+        let shotDelay = 300; // milliseconds
+        let musicPlaying = false;
+        
+        // Shard types with properties
+        const shardTypes = {
+            fire: {
+                color: '#f87171',
+                name: 'Inferno Shard',
+                description: 'Shoots fireballs that explode on impact'
+            },
+            ice: {
+                color: '#60a5fa',
+                name: 'Frost Shard',
+                description: 'Slows enemies with icy projectiles'
+            },
+            lightning: {
+                color: '#fbbf24',
+                name: 'Storm Shard',
+                description: 'Fast lightning bolts with chain damage'
+            },
+            shadow: {
+                color: '#8b5cf6',
+                name: 'Void Shard',
+                description: 'Dark energy that pierces through enemies'
+            }
+        };
+        
+        // DOM elements
+        const healthFill = document.getElementById('health-fill');
+        const scoreDisplay = document.getElementById('score-display');
+        const gameOverScreen = document.getElementById('game-over');
+        const finalScoreDisplay = document.getElementById('final-score');
+        const startBtn = document.getElementById('start-btn');
+        const restartBtn = document.getElementById('restart-btn');
+        const shardSlots = document.querySelectorAll('.shard-slot');
+        const tooltip = document.getElementById('tooltip');
+        
+        // Initialize game
+        function initGame() {
+            player.x = canvas.width / 2;
+            player.y = canvas.height / 2;
+            player.health = player.maxHealth;
+            enemies = [];
+            shards = [];
+            score = 0;
+            updateUI();
+            gameState = 'playing';
+            document.getElementById('game-title').style.display = 'none';
+            gameOverScreen.style.display = 'none';
+            
+            // Start music if it was playing
+            if (musicPlaying) {
+                bgMusic.currentTime = 0;
+                bgMusic.play().catch(e => console.log("Music autoplay blocked"));
+            }
+        }
+        
+        // Update UI elements
+        function updateUI() {
+            healthFill.style.width = `${(player.health / player.maxHealth) * 100}%`;
+            scoreDisplay.textContent = `Shards: ${score}`;
+        }
+        
+        // Create enemy
+        function createEnemy() {
+            const size = Math.random() * 20 + 20;
+            let x, y;
+            
+            // Spawn from outside the screen
+            if (Math.random() > 0.5) {
+                x = Math.random() > 0.5 ? -size : canvas.width + size;
+                y = Math.random() * canvas.height;
+            } else {
+                x = Math.random() * canvas.width;
+                y = Math.random() > 0.5 ? -size : canvas.height + size;
+            }
+            
+            const speed = Math.random() * 1.5 + 1;
+            const angle = Math.atan2(player.y - y, player.x - x);
+            
+            enemies.push({
+                x: x,
+                y: y,
+                size: size,
+                speed: speed,
+                angle: angle,
+                health: Math.floor(size / 5) + 1,
+                maxHealth: Math.floor(size / 5) + 1,
+                type: Math.random() > 0.7 ? 'elite' : 'normal'
+            });
+        }
+        
+        // Create shard
+        function createShard() {
+            const types = Object.keys(shardTypes);
+            const type = types[Math.floor(Math.random() * types.length)];
+            
+            shards.push({
+                x: Math.random() * (canvas.width - 40) + 20,
+                y: Math.random() * (canvas.height - 40) + 20,
+                type: type,
+                radius: 15,
+                pulse: 0
+            });
+        }
+        
+        // Player attack
+        function playerAttack() {
+            const now = Date.now();
+            if (now - lastShot < shotDelay) return;
+            
+            lastShot = now;
+            
+            // Different attack patterns based on shard
+            switch (player.activeShard) {
+                case 'fire':
+                    createProjectile(player.x, player.y, player.activeShard);
+                    break;
+                case 'ice':
+                    createProjectile(player.x, player.y, player.activeShard);
+                    shotDelay = 400;
+                    break;
+                case 'lightning':
+                    createProjectile(player.x, player.y, player.activeShard);
+                    shotDelay = 200;
+                    break;
+                case 'shadow':
+                    createProjectile(player.x, player.y, player.activeShard);
+                    break;
+            }
+        }
+        
+        // Create projectile
+        function createProjectile(x, y, type) {
+            const angle = Math.atan2(mouseY - y, mouseX - x);
+            projectiles.push({
+                x: x,
+                y: y,
+                radius: 8,
+                speed: 8,
+                angle: angle,
+                type: type,
+                damage: 1
+            });
+        }
+        
+        // Game variables for projectiles
+        let projectiles = [];
+        let mouseX = canvas.width / 2;
+        let mouseY = canvas.height / 2;
+        
+        // Handle mouse movement
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouseX = e.clientX - rect.left;
+            mouseY = e.clientY - rect.top;
+        });
+        
+        // Handle mouse click for attacking
+        canvas.addEventListener('mousedown', () => {
+            if (gameState === 'playing') {
+                playerAttack();
+            }
+        });
+        
+        // Handle keyboard input
+        window.addEventListener('keydown', (e) => {
+            keys[e.key] = true;
+            
+            // Number keys for shard switching
+            if (gameState === 'playing') {
+                if (e.key >= '1' && e.key <= '4') {
+                    const shardKeys = ['fire', 'ice', 'lightning', 'shadow'];
+                    const index = parseInt(e.key) - 1;
+                    if (index >= 0 && index < shardKeys.length) {
+                        player.activeShard = shardKeys[index];
+                        updateActiveShard();
+                    }
+                }
+            }
+        });
+        
+        window.addEventListener('keyup', (e) => {
+            keys[e.key] = false;
+        });
+        
+        // Update active shard UI
+        function updateActiveShard() {
+            shardSlots.forEach(slot => {
+                slot.classList.remove('active');
+                if (slot.dataset.shard === player.activeShard) {
+                    slot.classList.add('active');
+                }
+            });
+        }
+        
+        // Music toggle
+        musicBtn.addEventListener('click', function() {
+            if (musicPlaying) {
+                bgMusic.pause();
+                musicBtn.textContent = '🔇';
+                musicPlaying = false;
+            } else {
+                bgMusic.play().then(() => {
+                    musicBtn.textContent = '♪';
+                    musicPlaying = true;
+                }).catch(e => {
+                    alert('Music might be blocked by browser. Click anywhere to enable!');
+                });
+            }
+        });
+        
+        // Enable music on first user interaction
+        function enableAudio() {
+            if (!musicPlaying) {
+                bgMusic.play().then(() => {
+                    musicBtn.textContent = '♪';
+                    musicPlaying = true;
+                }).catch(e => console.log("Audio play failed"));
+            }
+            document.removeEventListener('click', enableAudio);
+            document.removeEventListener('touchstart', enableAudio);
+        }
+        
+        document.addEventListener('click', enableAudio);
+        document.addEventListener('touchstart', enableAudio);
+        
+        // Shard slot click handling
+        shardSlots.forEach(slot => {
+            slot.addEventListener('click', () => {
+                player.activeShard = slot.dataset.shard;
+                updateActiveShard();
+            });
+            
+            // Tooltip handling
+            slot.addEventListener('mouseenter', (e) => {
+                const shard = slot.dataset.shard;
+                const shardInfo = shardTypes[shard];
+                tooltip.textContent = `${shardInfo.name}: ${shardInfo.description}`;
+                tooltip.style.opacity = '1';
+                tooltip.style.left = `${e.pageX + 10}px`;
+                tooltip.style.top = `${e.pageY + 10}px`;
+            });
+            
+            slot.addEventListener('mousemove', (e) => {
+                tooltip.style.left = `${e.pageX + 10}px`;
+                tooltip.style.top = `${e.pageY + 10}px`;
+            });
+            
+            slot.addEventListener('mouseleave', () => {
+                tooltip.style.opacity = '0';
+            });
+        });
+        
+        // Start and restart buttons
+        startBtn.addEventListener('click', initGame);
+        restartBtn.addEventListener('click', initGame);
+        
+        // Draw player
+        function drawPlayer() {
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+            ctx.fillStyle = shardTypes[player.activeShard].color;
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Draw direction indicator
+            const angle = Math.atan2(mouseY - player.y, mouseX - player.x);
+            ctx.beginPath();
+            ctx.moveTo(player.x, player.y);
+            ctx.lineTo(
+                player.x + Math.cos(angle) * (player.radius + 10),
+                player.y + Math.sin(angle) * (player.radius + 10)
+            );
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+        }
+        
+        // Draw enemies
+        function drawEnemies() {
+            enemies.forEach(enemy => {
+                ctx.beginPath();
+                ctx.arc(enemy.x, enemy.y, enemy.size, 0, Math.PI * 2);
+                
+                if (enemy.type === 'elite') {
+                    ctx.fillStyle = '#ec4899';
+                    // Draw elite indicator
+                    ctx.beginPath();
+                    ctx.arc(enemy.x, enemy.y - enemy.size - 10, 8, 0, Math.PI * 2);
+                    ctx.fillStyle = '#fbbf24';
+                    ctx.fill();
+                } else {
+                    ctx.fillStyle = '#64748b';
+                }
+                
+                ctx.fill();
+                ctx.strokeStyle = '#334155';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // Draw health bar
+                const healthWidth = (enemy.health / enemy.maxHealth) * enemy.size * 2;
+                ctx.fillStyle = '#1e293b';
+                ctx.fillRect(enemy.x - enemy.size, enemy.y - enemy.size - 15, enemy.size * 2, 8);
+                ctx.fillStyle = enemy.health > enemy.maxHealth * 0.5 ? '#22c55e' : '#ef4444';
+                ctx.fillRect(enemy.x - enemy.size, enemy.y - enemy.size - 15, healthWidth, 8);
+            });
+        }
+        
+        // Draw shards
+        function drawShards() {
+            shards.forEach(shard => {
+                shard.pulse = (shard.pulse + 0.1) % (Math.PI * 2);
+                const pulseSize = shard.radius + Math.sin(shard.pulse) * 3;
+                
+                ctx.beginPath();
+                ctx.arc(shard.x, shard.y, pulseSize, 0, Math.PI * 2);
+                ctx.fillStyle = shardTypes[shard.type].color;
+                ctx.fill();
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // Draw shard icon
+                ctx.font = '20px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = '#ffffff';
+                ctx.fillText(
+                    shard.type === 'fire' ? '🔥' : 
+                    shard.type === 'ice' ? '❄️' : 
+                    shard.type === 'lightning' ? '⚡' : '🌑',
+                    shard.x, 
+                    shard.y
+                );
+            });
+        }
+        
+        // Draw projectiles
+        function drawProjectiles() {
+            projectiles.forEach(projectile => {
+                ctx.beginPath();
+                ctx.arc(projectile.x, projectile.y, projectile.radius, 0, Math.PI * 2);
+                ctx.fillStyle = shardTypes[projectile.type].color;
+                ctx.fill();
+                
+                // Add glow effect
+                ctx.beginPath();
+                ctx.arc(projectile.x, projectile.y, projectile.radius + 3, 0, Math.PI * 2);
+                const gradient = ctx.createRadialGradient(
+                    projectile.x, projectile.y, projectile.radius,
+                    projectile.x, projectile.y, projectile.radius + 8
+                );
+                gradient.addColorStop(0, shardTypes[projectile.type].color);
+                gradient.addColorStop(1, 'transparent');
+                ctx.fillStyle = gradient;
+                ctx.fill();
+            });
+        }
+        
+        // Update game state
+        function update() {
+            if (gameState !== 'playing') return;
+            
+            // Handle player movement
+            if (keys['w'] || keys['ArrowUp']) player.y -= player.speed;
+            if (keys['s'] || keys['ArrowDown']) player.y += player.speed;
+            if (keys['a'] || keys['ArrowLeft']) player.x -= player.speed;
+            if (keys['d'] || keys['ArrowRight']) player.x += player.speed;
+            
+            // Keep player in bounds
+            player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x));
+            player.y = Math.max(player.radius, Math.min(canvas.height - player.radius, player.y));
+            
+            // Spawn enemies
+            if (Math.random() < 0.03) {
+                createEnemy();
+            }
+            
+            // Spawn shards occasionally
+            if (Math.random() < 0.005) {
+                createShard();
+            }
+            
+            // Update enemies
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                const enemy = enemies[i];
+                
+                // Move towards player
+                enemy.angle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+                enemy.x += Math.cos(enemy.angle) * enemy.speed;
+                enemy.y += Math.sin(enemy.angle) * enemy.speed;
+                
+                // Check collision with player
+                const dx = player.x - enemy.x;
+                const dy = player.y - enemy.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < player.radius + enemy.size) {
+                    player.health -= 0.5;
+                    if (player.health <= 0) {
+                        player.health = 0;
+                        gameState = 'gameOver';
+                        finalScoreDisplay.textContent = `Shards Collected: ${score}`;
+                        gameOverScreen.style.display = 'flex';
+                        if (musicPlaying) bgMusic.pause();
+                    }
+                }
+                
+                // Remove if off screen
+                if (enemy.x < -100 || enemy.x > canvas.width + 100 || 
+                    enemy.y < -100 || enemy.y > canvas.height + 100) {
+                    enemies.splice(i, 1);
+                }
+            }
+            
+            // Update projectiles
+            for (let i = projectiles.length - 1; i >= 0; i--) {
+                const proj = projectiles[i];
+                proj.x += Math.cos(proj.angle) * proj.speed;
+                proj.y += Math.sin(proj.angle) * proj.speed;
+                
+                // Remove if off screen
+                if (proj.x < -50 || proj.x > canvas.width + 50 || 
+                    proj.y < -50 || proj.y > canvas.height + 50) {
+                    projectiles.splice(i, 1);
+                    continue;
+                }
+                
+                // Check collision with enemies
+                for (let j = enemies.length - 1; j >= 0; j--) {
+                    const enemy = enemies[j];
+                    const dx = proj.x - enemy.x;
+                    const dy = proj.y - enemy.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance < proj.radius + enemy.size) {
+                        enemy.health -= proj.damage;
+                        
+                        // Special effects based on shard type
+                        if (proj.type === 'fire') {
+                            // Fire explosion - damage nearby enemies
+                            for (let k = enemies.length - 1; k >= 0; k--) {
+                                const otherEnemy = enemies[k];
+                                if (k !== j) {
+                                    const ex = proj.x - otherEnemy.x;
+                                    const ey = proj.y - otherEnemy.y;
+                                    const edist = Math.sqrt(ex * ex + ey * ey);
+                                    if (edist < 80) {
+                                        otherEnemy.health -= 0.5;
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // Remove enemy if dead
+                        if (enemy.health <= 0) {
+                            enemies.splice(j, 1);
+                            score += enemy.type === 'elite' ? 3 : 1;
+                        }
+                        
+                        // Remove projectile
+                        projectiles.splice(i, 1);
+                        break;
+                    }
+                }
+            }
+            
+            // Update shards
+            for (let i = shards.length - 1; i >= 0; i--) {
+                const shard = shards[i];
+                
+                // Check collision with player
+                const dx = player.x - shard.x;
+                const dy = player.y - shard.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < player.radius + shard.radius) {
+                    // Collect shard - switch to this type
+                    player.activeShard = shard.type;
+                    updateActiveShard();
+                    shards.splice(i, 1);
+                    score += 2;
+                }
+            }
+            
+            updateUI();
+        }
+        
+        // Main game loop
+        function gameLoop() {
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw background grid
+            ctx.strokeStyle = 'rgba(50, 60, 80, 0.3)';
+            ctx.lineWidth = 1;
+            
+            // Vertical lines
+            for (let x = 0; x < canvas.width; x += 40) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            
+            // Horizontal lines
+            for (let y = 0; y < canvas.height; y += 40) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+            
+            if (gameState === 'playing') {
+                update();
+                drawProjectiles();
+                drawEnemies();
+                drawShards();
+                drawPlayer();
+            }
+            
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Start the game
+        gameLoop();
+    </script>
+</body>
+</html>
